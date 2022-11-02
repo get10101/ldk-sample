@@ -71,8 +71,7 @@ connectpeer 0380b953338331a23be199d5ca70ca3f6b5f0638aaff046a370c4618e75e5aa692@1
 Make sure to fund your wallet. If you use nigiri you can run this command: 
 
 ```bash
-ADDRESS=$(curl --user $BITCOIN_RPC_USERNAME:$BITCOIN_RPC_PASSWORD --data-binary '{"jsonrpc": "1.0", "id": "curltest", "method": "getnewaddress", "params": []}' -H 'content-type: text/plain
-;' http://127.0.0.1:18443/wallet/$WALLET_NAME)
+ADDRESS=$(curl --user $BITCOIN_RPC_USERNAME:$BITCOIN_RPC_PASSWORD --data-binary '{"jsonrpc": "1.0", "id": "curltest", "method": "getnewaddress", "params": []}' -H 'content-type: text/plain;' http://127.0.0.1:18443/wallet/$WALLET_NAME | jq .result -r )
 nigiri faucet $ADDRESS
 ```
 
