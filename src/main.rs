@@ -371,6 +371,7 @@ async fn start_ldk() {
 	let bitcoind_client = match BitcoindClient::new(
 		args.bitcoind_rpc_host.clone(),
 		args.bitcoind_rpc_port,
+		args.bitcoin_rpc_wallet.clone(),
 		args.bitcoind_rpc_username.clone(),
 		args.bitcoind_rpc_password.clone(),
 		tokio::runtime::Handle::current(),
@@ -593,7 +594,9 @@ async fn start_ldk() {
 	let stop_listen_connect = Arc::new(AtomicBool::new(false));
 	let stop_listen = Arc::clone(&stop_listen_connect);
 	tokio::spawn(async move {
-		let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", listening_port))
+		let local_address = format!("0.0.0.0:{}", listening_port);
+		println!("Listening locally on {}", local_address);
+		let listener = tokio::net::TcpListener::bind(local_address)
 			.await
 			.expect("Failed to bind to listen port - is something else already listening on it?");
 		loop {

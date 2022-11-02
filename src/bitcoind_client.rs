@@ -55,10 +55,14 @@ const MIN_FEERATE: u32 = 253;
 
 impl BitcoindClient {
 	pub async fn new(
-		host: String, port: u16, rpc_user: String, rpc_password: String,
+		host: String, port: u16, wallet_name: String, rpc_user: String, rpc_password: String,
 		handle: tokio::runtime::Handle,
 	) -> std::io::Result<Self> {
 		let http_endpoint = HttpEndpoint::for_host(host.clone()).with_port(port);
+		let http_endpoint = match wallet_name.as_str() {
+			"" => { http_endpoint }
+			wallet_name => { http_endpoint.with_path(format!("/wallet/{}", wallet_name)) }
+		};
 		let rpc_credentials =
 			base64::encode(format!("{}:{}", rpc_user.clone(), rpc_password.clone()));
 		let bitcoind_rpc_client = RpcClient::new(&rpc_credentials, http_endpoint)?;

@@ -33,6 +33,7 @@ pub(crate) struct LdkUserInfo {
 	pub(crate) bitcoind_rpc_password: String,
 	pub(crate) bitcoind_rpc_port: u16,
 	pub(crate) bitcoind_rpc_host: String,
+	pub(crate) bitcoin_rpc_wallet: String,
 	pub(crate) ldk_storage_dir_path: String,
 	pub(crate) ldk_peer_listening_port: u16,
 	pub(crate) ldk_announced_listen_addr: Vec<NetAddress>,
@@ -65,11 +66,12 @@ pub(crate) fn parse_startup_args() -> Result<LdkUserInfo, ()> {
 	}
 	let bitcoind_rpc_host = bitcoind_rpc_path[0].to_string();
 	let bitcoind_rpc_port = bitcoind_rpc_path[1].parse::<u16>().unwrap();
+	let bitcoin_rpc_wallet = env::args().skip(2).next().unwrap();
 
-	let ldk_storage_dir_path = env::args().skip(2).next().unwrap();
+	let ldk_storage_dir_path = env::args().skip(3).next().unwrap();
 
 	let mut ldk_peer_port_set = true;
-	let ldk_peer_listening_port: u16 = match env::args().skip(3).next().map(|p| p.parse()) {
+	let ldk_peer_listening_port: u16 = match env::args().skip(4).next().map(|p| p.parse()) {
 		Some(Ok(p)) => p,
 		Some(Err(_)) => {
 			ldk_peer_port_set = false;
@@ -82,8 +84,8 @@ pub(crate) fn parse_startup_args() -> Result<LdkUserInfo, ()> {
 	};
 
 	let mut arg_idx = match ldk_peer_port_set {
-		true => 4,
-		false => 3,
+		true => 5,
+		false => 4,
 	};
 	let network: Network = match env::args().skip(arg_idx).next().as_ref().map(String::as_str) {
 		Some("testnet") => Network::Testnet,
@@ -131,6 +133,7 @@ pub(crate) fn parse_startup_args() -> Result<LdkUserInfo, ()> {
 	Ok(LdkUserInfo {
 		bitcoind_rpc_username,
 		bitcoind_rpc_password,
+		bitcoin_rpc_wallet,
 		bitcoind_rpc_host,
 		bitcoind_rpc_port,
 		ldk_storage_dir_path,
