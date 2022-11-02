@@ -26,18 +26,21 @@ Once done we need to set up a few things and define variables
 ```bash
 # After start, make sure to create a wallet. We don't want to use the default wallet so that we can run multiple nodes on the same machine:
 WALLET_NAME=alice
+# increment this counter per node you want to start
+PORT_INDEX=0
+
 nigiri rpc createwallet $WALLET_NAME 
 # The rpc username and password for nigir are hardcoded, you can find it in the bitcoin config in here:
 #Linux: ~/.nigiri/docker-compose.yml
 #macOS: $HOME/Library/Application Support/Nigiri/docker-compose.yml
 
-# You can check if the wallet exists and has balance with
-curl --user admin1:123  --data-binary '{"jsonrpc": "1.0", "id": "curltest", "method": "getbalance", "params": ["*", 6]}' -H 'content-type: text/plain;' http://127.0.0.1:18443/wallet/$WALLET_NAME
-
 
 #The default password is 
 BITCOIN_RPC_USERNAME=admin1
 BITCOIN_RPC_PASSWORD=123
+
+# You can check if the wallet exists and has balance with
+curl --user $BITCOIN_RPC_USERNAME:$BITCOIN_RPC_PASSWORD  --data-binary '{"jsonrpc": "1.0", "id": "curltest", "method": "getbalance", "params": ["*", 6]}' -H 'content-type: text/plain;' http://127.0.0.1:18443/wallet/$WALLET_NAME
 
 #Unless you started the bitcoin node on a different machine, it will be accesible under: 
 BITCOIN_RPC_HOST=localhost
@@ -46,8 +49,6 @@ BITCOIN_RPC_PORT=18443
 #Since we potentially want to create multiple nodes it is worth storing the data in subdirectories
 LDK_STORAGE_DIRECTORY_PATH=$PWD/storage/$WALLET_NAME
 
-# increment this counter per node you want to start
-PORT_INDEX=0
 #Next we define the port your node will be listening on
 LDK_PEER_LISTENING_PORT=$((9735+$PORT_INDEX))
 ANNOUNCED_LISTEN_ADDR=127.0.0.1
