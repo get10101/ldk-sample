@@ -1,5 +1,5 @@
 [package]
-name = "ldk-sample"
+name = "ldk-tutorial-node"
 version = "0.1.0"
 authors = ["Valentine Wallace <vwallace@protonmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -34,3 +34,6 @@ panic = "abort"
 
 [profile.dev]
 panic = "abort"
+
+[patch.crates-io]
+lightning = { git = "https://github.com/itchysats/rust-lightning", branch = "dlcs" }
