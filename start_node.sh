@@ -13,7 +13,7 @@ main() {
     BITCOIN_RPC_HOST=localhost
     BITCOIN_RPC_PORT=18443
 
-    wallet_info_res=$(curl -s --user $BITCOIN_RPC_USERNAME:$BITCOIN_RPC_PASSWORD --data-binary '{"jsonrpc": "1.0", "method": "getwalletinfo"}' -H 'content-type: text/plain;' http://127.0.0.1:18443/wallet/"${WALLET_NAME}" | jq .error -r)
+    wallet_info_res=$(curl -s --user $BITCOIN_RPC_USERNAME:$BITCOIN_RPC_PASSWORD --data-binary '{"jsonrpc": "1.0", "method": "getwalletinfo"}' -H 'content-type: text/plain;' http://127.0.0.1:18443/wallet/$WALLET_NAME | jq .error -r)
     if [[ $wallet_info_res != "null" ]]; then
         nigiri rpc createwallet $WALLET_NAME
     fi
