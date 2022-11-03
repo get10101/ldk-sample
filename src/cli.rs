@@ -304,6 +304,42 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						outbound_payments.clone(),
 					);
 				}
+				"addcustomoutput" => {
+					let dest_pubkey = match words.next() {
+						Some(dest) => match hex_utils::to_compressed_pubkey(dest) {
+							Some(pk) => pk,
+							None => {
+								println!("ERROR: couldn't parse destination pubkey");
+								continue;
+							}
+						},
+						None => {
+							println!("ERROR: addcustomoutput requires a destination pubkey: `addcustomoutput <dest_pubkey> <amt_msat>`");
+							continue;
+						}
+					};
+					let amt_msat_str = match words.next() {
+						Some(amt) => amt,
+						None => {
+							println!("ERROR: addcustomoutput requires an amount in millisatoshis: `addcustomoutput <dest_pubkey> <amt_msat>`");
+							continue;
+						}
+					};
+					let amt_msat: u64 = match amt_msat_str.parse() {
+						Ok(amt) => amt,
+						Err(e) => {
+							println!("ERROR: couldn't parse amount_msat: {}", e);
+							continue;
+						}
+					};
+					add_custom_output(
+						&*invoice_payer,
+						dest_pubkey,
+						amt_msat,
+						&*keys_manager,
+						outbound_payments.clone(),
+					);
+				}
 				"getinvoice" => {
 					let amt_str = words.next();
 					if amt_str.is_none() {
@@ -746,6 +782,7 @@ fn send_payment<E: EventHandler>(
 			print!("> ");
 			HTLCStatus::Failed
 		}
+		_ => unreachable!()
 	};
 	let payment_hash = PaymentHash(invoice.payment_hash().clone().into_inner());
 	let payment_secret = Some(invoice.payment_secret().clone());
@@ -794,6 +831,7 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 			print!("> ");
 			HTLCStatus::Failed
 		}
+		_ => unreachable!()
 	};
 
 	let mut payments = payment_storage.lock().unwrap();
@@ -806,6 +844,31 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 			amt_msat: MillisatAmount(Some(amt_msat)),
 		},
 	);
+}
+
+fn add_custom_output<E: EventHandler, K: KeysInterface>(
+	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_msat: u64, keys: &K,
+	payment_storage: PaymentInfoStorage,
+) {
+	match invoice_payer.add_custom_output(
+		payee_pubkey,
+		amt_msat,
+		40,
+	) {
+		Ok(()) => {
+			println!("EVENT: initiated custom output creation of {} msats with counterparty {}", amt_msat, payee_pubkey);
+			print!("> ");
+		}
+		Err(PaymentError::Routing(e)) => {
+			println!("ERROR: failed to find route: {}", e.err);
+			print!("> ");
+		}
+		Err(PaymentError::CreatingCustomOutput(e)) => {
+			println!("ERROR: failed to create custom output: {:?}", e);
+			print!("> ");
+		}
+		_ => unreachable!()
+	};
 }
 
 fn get_invoice(
