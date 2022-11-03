@@ -593,9 +593,11 @@ async fn start_ldk() {
 	let listening_port = args.ldk_peer_listening_port;
 	let stop_listen_connect = Arc::new(AtomicBool::new(false));
 	let stop_listen = Arc::clone(&stop_listen_connect);
+	let node_id = channel_manager.get_our_node_id();
 	tokio::spawn(async move {
 		let local_address = format!("0.0.0.0:{}", listening_port);
 		println!("Listening locally on {}", local_address);
+		println!("Connect from other node via: `connectpeer {}@127.0.0.1:{}`", node_id, listening_port);
 		let listener = tokio::net::TcpListener::bind(local_address)
 			.await
 			.expect("Failed to bind to listen port - is something else already listening on it?");
