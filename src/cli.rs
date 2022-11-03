@@ -318,24 +318,41 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 							continue;
 						}
 					};
-					let amt_msat_str = match words.next() {
+					let amt_dlr_msat_str = match words.next() {
 						Some(amt) => amt,
 						None => {
-							println!("ERROR: addcustomoutput requires an amount in millisatoshis: `addcustomoutput <dest_pubkey> <amt_msat>`");
+							println!("ERROR: addcustomoutput requires an amount_dialer in millisatoshis: `addcustomoutput <dest_pubkey> <amt_dlr_msat> <amt_lstnr_msat>`");
 							continue;
 						}
 					};
-					let amt_msat: u64 = match amt_msat_str.parse() {
+					let amt_dlr_msat: u64 = match amt_dlr_msat_str.parse() {
 						Ok(amt) => amt,
 						Err(e) => {
 							println!("ERROR: couldn't parse amount_msat: {}", e);
 							continue;
 						}
 					};
+
+					let amt_lstnr_msat_str = match words.next() {
+						Some(amt) => amt,
+						None => {
+							println!("ERROR: addcustomoutput requires an amount_dialer in millisatoshis: `addcustomoutput <dest_pubkey> <amt_dlr_msat> <amt_lstnr_msat>`");
+							continue;
+						}
+					};
+					let amt_lstnr_msat: u64 = match amt_lstnr_msat_str.parse() {
+						Ok(amt) => amt,
+						Err(e) => {
+							println!("ERROR: couldn't parse amount_msat: {}", e);
+							continue;
+						}
+					};
+
 					add_custom_output(
 						&*invoice_payer,
 						dest_pubkey,
-						amt_msat,
+						amt_dlr_msat,
+						amt_lstnr_msat,
 					);
 				}
 				"getinvoice" => {
@@ -845,15 +862,16 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 }
 
 fn add_custom_output<E: EventHandler>(
-	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_msat: u64
+	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_dlr_msat: u64, amt_lstnr_msat: u64
 ) {
 	match invoice_payer.add_custom_output(
 		payee_pubkey,
-		amt_msat,
+		amt_dlr_msat,
+		amt_lstnr_msat,
 		40,
 	) {
 		Ok(()) => {
-			println!("EVENT: initiated custom output creation of {} msats with counterparty {}", amt_msat, payee_pubkey);
+			println!("EVENT: initiated custom output creation of {} msats with counterparty {}", amt_dlr_msat, payee_pubkey);
 			print!("> ");
 		}
 		Err(PaymentError::Routing(e)) => {
