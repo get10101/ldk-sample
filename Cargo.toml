@@ -36,5 +36,7 @@ panic = "abort"
 panic = "abort"
 
 [patch.crates-io]
-lightning = { git = "https://github.com/itchysats/rust-lightning", branch = "dlcs" }
-lightning-invoice = { git = "https://github.com/itchysats/rust-lightning", branch = "dlcs" }
+# lightning = { git = "https://github.com/itchysats/rust-lightning", branch = "dlcs" }
+# lightning-invoice = { git = "https://github.com/itchysats/rust-lightning", branch = "dlcs" }
+lightning = { path = "../rust-lightning/lightning" }
+lightning-invoice = { path = "../rust-lightning/lightning-invoice" }
