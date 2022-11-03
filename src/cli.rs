@@ -336,8 +336,6 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						&*invoice_payer,
 						dest_pubkey,
 						amt_msat,
-						&*keys_manager,
-						outbound_payments.clone(),
 					);
 				}
 				"getinvoice" => {
@@ -846,9 +844,8 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 	);
 }
 
-fn add_custom_output<E: EventHandler, K: KeysInterface>(
-	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_msat: u64, keys: &K,
-	payment_storage: PaymentInfoStorage,
+fn add_custom_output<E: EventHandler>(
+	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_msat: u64
 ) {
 	match invoice_payer.add_custom_output(
 		payee_pubkey,
