@@ -975,7 +975,10 @@ fn remove_custom_output<E: EventHandler>(
 			println!("ERROR: failed to create custom output: {:?}", e);
 			print!("> ");
 		}
-		_ => unreachable!()
+		Err(e) => {
+			dbg!(e);
+			unreachable!()
+		}
 	};
 }
 
