@@ -326,6 +326,7 @@ async fn handle_ldk_events(
 			});
 		}
 		Event::SpendableOutputs { outputs } => {
+			println!("Received spendable outputs");
 			let destination_address = bitcoind_client.get_new_address().await;
 			let output_descriptors = &outputs.iter().map(|a| a).collect::<Vec<_>>();
 			let tx_feerate =

@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use crate::disk;
 use crate::hex_utils;
 use crate::{
@@ -19,6 +20,7 @@ use lightning::util::ser::{MaybeReadableArgs, Writeable, Writer};
 use lightning_invoice::payment::PaymentError;
 use lightning_invoice::{utils, Currency, Invoice};
 use std::env;
+use std::error::Error;
 use std::io;
 use std::io::Write;
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
@@ -27,6 +29,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use lightning::ln::channelmanager::CustomOutputId;
 
 pub(crate) struct LdkUserInfo {
 	pub(crate) bitcoind_rpc_username: String,
@@ -353,6 +356,71 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						dest_pubkey,
 						amt_dlr_msat,
 						amt_lstnr_msat,
+					);
+				}
+				"removecustomoutput" => {
+					let dest_pubkey = match dbg!(words.next()) {
+						Some(dest) => match hex_utils::to_compressed_pubkey(dest) {
+							Some(pk) => pk,
+							None => {
+								println!("ERROR: couldn't parse destination pubkey");
+								continue;
+							}
+						},
+						None => {
+							println!("ERROR: removecustomoutput requires a destination pubkey: `addcustomoutput <dest_pubkey> <amt_local_msat> <amt_remote_msat`");
+							continue;
+						}
+					};
+					let custom_output_id = match dbg!(words.next()) {
+						Some(dest) => match hex_utils::to_vec(dest) {
+							Some(bytes) => CustomOutputId(to_slice(bytes)),
+							None => {
+								println!("ERROR: couldn't parse custom_output id");
+								continue;
+							}
+						},
+						None => {
+							println!("ERROR: removecustomoutput requires a custom output id: `removecustomoutput <dest_pubkey> <custom_output_id> <amt_local_msat> <amt_remote_msat`");
+							continue;
+						}
+					};
+					let amt_local_msat_str = match dbg!(words.next()) {
+						Some(amt) => amt,
+						None => {
+							println!("ERROR: removecustomoutput requires an amount_dialer in millisatoshis: `removecustomoutput <dest_pubkey> <custom_output_id> <amt_local_msat> <amt_remote_msat>`");
+							continue;
+						}
+					};
+					let amt_local_msat: u64 = match amt_local_msat_str.parse() {
+						Ok(amt) => amt,
+						Err(e) => {
+							println!("ERROR: couldn't parse amount_msat: {}", e);
+							continue;
+						}
+					};
+
+					let amt_remote_msat_str = match words.next() {
+						Some(amt) => amt,
+						None => {
+							println!("ERROR: removecustomoutput requires an amount_dialer in millisatoshis: `removecustomoutput <dest_pubkey> <custom_output_id> <amt_local_msat> <amt_remote_msat>`");
+							continue;
+						}
+					};
+					let amt_remote_msat: u64 = match amt_remote_msat_str.parse() {
+						Ok(amt) => amt,
+						Err(e) => {
+							println!("ERROR: couldn't parse amount_msat: {}", e);
+							continue;
+						}
+					};
+
+					remove_custom_output(
+						&*invoice_payer,
+						dest_pubkey,
+						custom_output_id,
+						amt_local_msat,
+						amt_remote_msat,
 					);
 				}
 				"getinvoice" => {
@@ -870,8 +938,33 @@ fn add_custom_output<E: EventHandler>(
 		amt_lstnr_msat,
 		40,
 	) {
+		Ok(custom_output_id) => {
+			println!("EVENT: initiated custom output creation of {} msats with counterparty {}. \nCustom output id {}", amt_dlr_msat + amt_lstnr_msat, payee_pubkey, hex::encode(custom_output_id.0));
+			print!("> ");
+		}
+		Err(PaymentError::Routing(e)) => {
+			println!("ERROR: failed to find route: {}", e.err);
+			print!("> ");
+		}
+		Err(PaymentError::CreatingCustomOutput(e)) => {
+			println!("ERROR: failed to create custom output: {:?}", e);
+			print!("> ");
+		}
+		_ => unreachable!()
+	};
+}
+
+fn remove_custom_output<E: EventHandler>(
+	invoice_payer: &InvoicePayer<E>, counter_party_pubkey: PublicKey, custom_output_id: CustomOutputId, amt_local_msat: u64, amt_remote_msat: u64
+) {
+	match invoice_payer.remove_custom_output(
+		counter_party_pubkey,
+		custom_output_id,
+		amt_local_msat,
+		amt_remote_msat,
+	) {
 		Ok(()) => {
-			println!("EVENT: initiated custom output creation of {} msats with counterparty {}", amt_dlr_msat, payee_pubkey);
+			println!("EVENT: removed custom output {} with {} msats for us and {} for them.", custom_output_id, amt_local_msat, amt_remote_msat);
 			print!("> ");
 		}
 		Err(PaymentError::Routing(e)) => {
@@ -977,4 +1070,11 @@ pub(crate) fn parse_peer_info(
 	}
 
 	Ok((pubkey.unwrap(), peer_addr.unwrap().unwrap()))
+}
+
+
+
+fn to_slice<T>(v: Vec<T>) -> [T; 32] {
+	v.try_into()
+		.unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", 32, v.len()))
 }

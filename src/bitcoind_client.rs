@@ -73,6 +73,13 @@ impl BitcoindClient {
 				std::io::Error::new(std::io::ErrorKind::PermissionDenied,
 				"Failed to make initial call to bitcoind - please check your RPC user/password and access settings")
 			})?;
+		let addr = bitcoind_rpc_client
+			.call_method::<NewAddress>("getnewaddress", &[])
+			.await
+			.unwrap();
+
+		println!("Next address {}", addr.0);
+
 		let mut fees: HashMap<Target, AtomicU32> = HashMap::new();
 		fees.insert(Target::Background, AtomicU32::new(MIN_FEERATE));
 		fees.insert(Target::Normal, AtomicU32::new(2000));
