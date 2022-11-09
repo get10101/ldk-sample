@@ -1,6 +1,8 @@
 #!/bin/bash
 
 main() {
+    set -e
+
     WALLET_NAME=$1
 
     nigiri rpc getblockchaininfo &>/dev/null
