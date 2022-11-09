@@ -5,6 +5,7 @@ use crate::{
 	ChannelManager, HTLCStatus, InvoicePayer, MillisatAmount, NetworkGraph, OnionMessenger,
 	PaymentInfo, PaymentInfoStorage, PeerManager,
 };
+use bitcoin::Script;
 use bitcoin::hashes::sha256::Hash as Sha256;
 use bitcoin::hashes::Hash;
 use bitcoin::network::constants::Network;
@@ -20,7 +21,6 @@ use lightning::util::ser::{MaybeReadableArgs, Writeable, Writer};
 use lightning_invoice::payment::PaymentError;
 use lightning_invoice::{utils, Currency, Invoice};
 use std::env;
-use std::error::Error;
 use std::io;
 use std::io::Write;
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
@@ -317,18 +317,19 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 							}
 						},
 						None => {
-							println!("ERROR: addcustomoutput requires a destination pubkey: `addcustomoutput <dest_pubkey> <amt_msat>`");
+							println!("ERROR: addcustomoutput requires a destination pubkey: `addcustomoutput <dest_pubkey> <amt_local_msat> <amt_remote_msat> <script>`");
 							continue;
 						}
 					};
-					let amt_dlr_msat_str = match words.next() {
+
+					let amt_local_msat_str = match words.next() {
 						Some(amt) => amt,
 						None => {
-							println!("ERROR: addcustomoutput requires an amount_dialer in millisatoshis: `addcustomoutput <dest_pubkey> <amt_dlr_msat> <amt_lstnr_msat>`");
+							println!("ERROR: addcustomoutput requires an amount_dialer in millisatoshis: `addcustomoutput <dest_pubkey> <amt_local_msat> <amt_remote_msat> <script>`");
 							continue;
 						}
 					};
-					let amt_dlr_msat: u64 = match amt_dlr_msat_str.parse() {
+					let amt_local_msat: u64 = match amt_local_msat_str.parse() {
 						Ok(amt) => amt,
 						Err(e) => {
 							println!("ERROR: couldn't parse amount_msat: {}", e);
@@ -339,11 +340,11 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 					let amt_lstnr_msat_str = match words.next() {
 						Some(amt) => amt,
 						None => {
-							println!("ERROR: addcustomoutput requires an amount_dialer in millisatoshis: `addcustomoutput <dest_pubkey> <amt_dlr_msat> <amt_lstnr_msat>`");
+							println!("ERROR: addcustomoutput requires an amount_dialer in millisatoshis: `addcustomoutput <dest_pubkey> <amt_local_msat> <amt_remote_msat> <script>`");
 							continue;
 						}
 					};
-					let amt_lstnr_msat: u64 = match amt_lstnr_msat_str.parse() {
+					let amt_remote_msat: u64 = match amt_lstnr_msat_str.parse() {
 						Ok(amt) => amt,
 						Err(e) => {
 							println!("ERROR: couldn't parse amount_msat: {}", e);
@@ -351,11 +352,28 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						}
 					};
 
+
+
+					let script = match words.next() {
+						Some(script) => {
+							let script = script.parse().unwrap();
+
+							script
+						},
+						None => {
+							println!("ERROR: addcustomoutput requires a script: `addcustomoutput <dest_pubkey> <amt_local_msat> <amt_remote_msat> <script>`");
+							continue;
+						}
+					};
+
+
+
 					add_custom_output(
 						&*invoice_payer,
 						dest_pubkey,
-						amt_dlr_msat,
-						amt_lstnr_msat,
+						amt_local_msat,
+						amt_remote_msat,
+						script
 					);
 				}
 				"removecustomoutput" => {
@@ -930,16 +948,17 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 }
 
 fn add_custom_output<E: EventHandler>(
-	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_dlr_msat: u64, amt_lstnr_msat: u64
+	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_local_msat: u64, amt_remote_msat: u64, script: Script,
 ) {
 	match invoice_payer.add_custom_output(
 		payee_pubkey,
-		amt_dlr_msat,
-		amt_lstnr_msat,
+		amt_local_msat,
+		amt_remote_msat,
 		40,
+		script
 	) {
 		Ok(custom_output_id) => {
-			println!("EVENT: initiated custom output creation of {} msats with counterparty {}. \nCustom output id {}", amt_dlr_msat + amt_lstnr_msat, payee_pubkey, hex::encode(custom_output_id.0));
+			println!("EVENT: initiated custom output creation of {} msats with counterparty {}. \nCustom output id {}", amt_local_msat + amt_remote_msat, payee_pubkey, hex::encode(custom_output_id.0));
 			print!("> ");
 		}
 		Err(PaymentError::Routing(e)) => {

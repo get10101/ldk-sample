@@ -382,6 +382,7 @@ name = "lightning-invoice"
 version = "0.20.0"
 dependencies = [
  "bech32 0.9.1",
+ "bitcoin",
  "bitcoin_hashes",
  "lightning",
  "num-traits",
