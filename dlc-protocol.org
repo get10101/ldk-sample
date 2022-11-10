@@ -1,0 +1,39 @@
+* Notes
+** Revocation key ignored for now
+The DLC should be embedded in a revocable contract created by ~rust-lightning~.
+** Generate signing keypairs
+- ~(t, T)~
+- ~(m, M)~
+** Choose addresses for non-collaborative settlement
+Pay back to the 10101 Bitcoin wallet!
+** Build and encsign spend transactions
+*** What we need from ~rust-lightning~
+- Outpoint of the custom output to create input.
+- Custom output script code for sighash.
+- Custom output amount for sighash.
+* Protocol proposal
+Assume channel is already open and with sufficient funds on both sides.
+** Agree on CFD parameters (payouts, expiration date, etc.)
+** Taker and maker exchange signing PKs, final Bitcoin addresses
+** Taker calls ~add_custom_output~
+*** Arguments
+- Channel ID of channel with maker.
+- Taker amount.
+- Maker amount.
+- Custom script including PKs ~T~ and ~M~.
+*** Return
+Commitment transaction details.
+*** Modifications
+At the moment we queue up a couple of messages when calling this, but we need to only do this once we've exchanged signatures on CETs and the refund transaction, which happens outside of ~rust-lightning~.
+** Taker builds CETs and refund transaction based on commitment transaction
+** Taker signs refund transaction and encsigns all CETs
+** Taker sends over commitment transaction info, CET encsignatures and refund transaction signature
+** Maker verifies all received data
+The maker cannot do anything with this yet because they don't have the commitment transaction signature from the taker.
+** Maker signs and sends back accordingly
+** Taker tells ~rust-lightning~ to proceed with protocol
+- Call it something like ~send_add_custom_output~.
+- This will actually queue up the messages that were generated after calling ~add_custom_output~
+** Taker's ~rust-lightning~ automatically sends ~update_add_custom_output~ message and ~commitment_signed~
+The maker /must/ check that the custom output described in the message is the same one that they signed spend transactions for! This means the protocol should become interactive on the listener side.
+** After the maker verifies the custom output, continue with the current ~rust-lightning~ protocol
