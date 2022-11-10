@@ -37,3 +37,14 @@ The maker cannot do anything with this yet because they don't have the commitmen
 ** Taker's ~rust-lightning~ automatically sends ~update_add_custom_output~ message and ~commitment_signed~
 The maker /must/ check that the custom output described in the message is the same one that they signed spend transactions for! This means the protocol should become interactive on the listener side.
 ** After the maker verifies the custom output, continue with the current ~rust-lightning~ protocol
+* Protocol proposal v2
+1. Taker add custom output -> (commitment_maker, commitment_taker, add_custom_output_msg, commitment_maker_signature_taker).
+2. Taker build CETs_maker and encsigns them using commitment_maker.
+3. Taker build CETs_taker and encsigns them using commitment_taker.
+4. Taker sends CETs_maker and CETs_maker_encsigs_taker.
+5. Taker sends CETs_taker and CETs_taker_encsigs_taker.
+6. Maker add custom output -> (commitment_taker, commitment_maker, add_custom_output_msg, commitment_taker_signature_maker)
+7. Maker build CETs_maker and encsigns them using commitment_maker.
+8. Maker build CETs_taker and encsigns them using commitment_taker.
+9. Maker sends CETs_taker_encsigs_maker.
+10. Maker sends CETs_maker_encsigs_maker.
