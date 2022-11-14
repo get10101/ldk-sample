@@ -29,7 +29,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use lightning::ln::channelmanager::CustomOutputId;
+use lightning::ln::channelmanager::{CustomOutputDetails, CustomOutputId};
 
 pub(crate) struct LdkUserInfo {
 	pub(crate) bitcoind_rpc_username: String,
@@ -352,8 +352,6 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						}
 					};
 
-
-
 					let script = match words.next() {
 						Some(script) => {
 							let script = script.parse().unwrap();
@@ -375,6 +373,23 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						amt_remote_msat,
 						script
 					);
+				}
+				"continueaddingcustomoutput" => {
+					let custom_output_id = match dbg!(words.next()) {
+						Some(dest) => match hex_utils::to_vec(dest) {
+							Some(bytes) => CustomOutputId(to_slice(bytes)),
+							None => {
+								println!("ERROR: couldn't parse custom_output id");
+								continue;
+							}
+						},
+						None => {
+							println!("ERROR: continueaddingcustomoutput requires a custom output id: `continueaddingcustomoutput <custom_output_id>`");
+							continue;
+						}
+					};
+
+					continue_adding_custom_output(channel_manager.clone(), custom_output_id);
 				}
 				"removecustomoutput" => {
 					let dest_pubkey = match dbg!(words.next()) {
@@ -947,6 +962,17 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 	);
 }
 
+fn continue_adding_custom_output(channel_manager: Arc<ChannelManager>, custom_output_id: CustomOutputId) {
+	match channel_manager.continue_remote_add_custom_output(custom_output_id) {
+		Ok(details) => {
+			println!("Custom output details. Continueing with creating CETs...");
+		}
+		Err(err) => {
+			println!("Could not continue adding custom output details {err}");
+		}
+	}
+}
+
 fn add_custom_output<E: EventHandler>(
 	invoice_payer: &InvoicePayer<E>, payee_pubkey: PublicKey, amt_local_msat: u64, amt_remote_msat: u64, script: Script,
 ) {
@@ -957,8 +983,8 @@ fn add_custom_output<E: EventHandler>(
 		40,
 		script
 	) {
-		Ok(custom_output_id) => {
-			println!("EVENT: initiated custom output creation of {} msats with counterparty {}. \nCustom output id {}", amt_local_msat + amt_remote_msat, payee_pubkey, hex::encode(custom_output_id.0));
+		Ok(response) => {
+			println!("EVENT: initiated custom output creation of {} msats with counterparty {}. \nCustom output id {}", amt_local_msat + amt_remote_msat, payee_pubkey, hex::encode(response.id.0));
 			print!("> ");
 		}
 		Err(PaymentError::Routing(e)) => {
