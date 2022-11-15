@@ -358,11 +358,10 @@ async fn handle_ldk_events(
 		Event::RemoteSentAddCustomOutputEvent { custom_output_id } => {
 			println!("EVENT: Remote sent add custom output {}", hex::encode(custom_output_id.0));
 		}
-		Event::RemoteSentCustomOutputCommitmentSignature { commitment_signed, revoke_and_ack } => {
+		Event::RemoteSentCustomOutputCommitmentSignature { commitment_signed, revoke_and_ack, public_key_remote } => {
 			println!("EVENT: Remote sent add custom output commitment signature and revoke_and_ack");
-			let pk = "0233cd5bca7baea5e3d4b7fd0665bfbf9b2311364afbcd264466451aa76b4aae41";
-			let public_key = hex_utils::to_compressed_pubkey(pk).unwrap();
-			match channel_manager.manual_send_commitment_signed(public_key, commitment_signed.clone(), revoke_and_ack.clone()) {
+
+			match channel_manager.manual_send_commitment_signed(*public_key_remote, commitment_signed.clone(), revoke_and_ack.clone()) {
 				Ok(_) => { println!("It worked"); }
 				Err(err) => {
 					println!("And we failed {err}");
