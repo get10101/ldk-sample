@@ -29,7 +29,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use lightning::ln::channelmanager::{CustomOutputDetails, CustomOutputId};
+use lightning::ln::channelmanager::CustomOutputId;
 
 pub(crate) struct LdkUserInfo {
 	pub(crate) bitcoind_rpc_username: String,
@@ -433,27 +433,11 @@ pub(crate) async fn poll_for_user_input<E: EventHandler>(
 						}
 					};
 
-					let amt_remote_msat_str = match words.next() {
-						Some(amt) => amt,
-						None => {
-							println!("ERROR: removecustomoutput requires an amount_dialer in millisatoshis: `removecustomoutput <dest_pubkey> <custom_output_id> <amt_local_msat> <amt_remote_msat>`");
-							continue;
-						}
-					};
-					let amt_remote_msat: u64 = match amt_remote_msat_str.parse() {
-						Ok(amt) => amt,
-						Err(e) => {
-							println!("ERROR: couldn't parse amount_msat: {}", e);
-							continue;
-						}
-					};
-
 					remove_custom_output(
 						&*invoice_payer,
 						dest_pubkey,
 						custom_output_id,
 						amt_local_msat,
-						amt_remote_msat,
 					);
 				}
 				"getinvoice" => {
@@ -964,7 +948,7 @@ fn keysend<E: EventHandler, K: KeysInterface>(
 
 fn continue_adding_custom_output(channel_manager: Arc<ChannelManager>, custom_output_id: CustomOutputId) {
 	match channel_manager.continue_remote_add_custom_output(custom_output_id) {
-		Ok(details) => {
+		Ok(_details) => {
 			println!("Custom output details. Continueing with creating CETs...");
 		}
 		Err(err) => {
@@ -1000,16 +984,15 @@ fn add_custom_output<E: EventHandler>(
 }
 
 fn remove_custom_output<E: EventHandler>(
-	invoice_payer: &InvoicePayer<E>, counter_party_pubkey: PublicKey, custom_output_id: CustomOutputId, amt_local_msat: u64, amt_remote_msat: u64
+	invoice_payer: &InvoicePayer<E>, counter_party_pubkey: PublicKey, custom_output_id: CustomOutputId, amt_local_msat: u64
 ) {
 	match invoice_payer.remove_custom_output(
 		counter_party_pubkey,
 		custom_output_id,
 		amt_local_msat,
-		amt_remote_msat,
 	) {
 		Ok(()) => {
-			println!("EVENT: removed custom output {} with {} msats for us and {} for them.", custom_output_id, amt_local_msat, amt_remote_msat);
+			println!("EVENT: removed custom output {} with {} msats for us.", custom_output_id, amt_local_msat);
 			print!("> ");
 		}
 		Err(PaymentError::Routing(e)) => {
